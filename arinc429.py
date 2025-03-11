@@ -133,4 +133,24 @@ def decode_002(ssm: int, data: int) -> float:
     return rise_rate
 
 
+def encode_003(angle: float) -> (int, int):
+    if angle is None:
+        return 1, 0
+    ssm = 0
+    if angle < 0:
+        ssm = 3
+    angle = abs(angle)
+    angle_bits = (
+        (int(angle // 10) << 8) | (int(angle % 10) << 4) | (int(angle * 10) % 10)
+    )
+    print(bin(angle_bits))
+    return ssm, angle_bits
 
+
+def decode_003(ssm: int, data: int) -> float:
+    if ssm == 1:
+        return 0.0
+    angle = ((data & 0x0F) + ((data >> 4) & 0x0F) * 10 + ((data >> 8) & 1) * 100) / 10
+    if ssm == 3:
+        angle = -angle
+    return angle

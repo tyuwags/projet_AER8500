@@ -30,6 +30,13 @@ if __name__ == '__main__':
     rate = arinc429.decode_002(ssm, data)
     print(rate)
 
-
+    ssm, data = arinc429.encode_003(-2.1)
+    print(bin(ssm), bin(data))
+    word = arinc429.encode(3, 1, data, ssm)
+    print(bin(word))
+    print(arinc429.is_valid(word))
+    label, sdi, data, ssm = arinc429.decode(word)
+    print(label, sdi)
+    print(arinc429.decode_003(ssm, data))
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
