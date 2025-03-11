@@ -20,6 +20,10 @@ if __name__ == '__main__':
     print(arinc429.is_valid(word))
     print(arinc429.decode(arinc429.encode(325, 2, 1902, 3)))
 
+    ssm, data = arinc429.encode_001(-30000, arinc429.CRUISE)
+    print(bin(ssm), bin(data))
+    altitude, state = arinc429.decode_001(ssm, data)
+    print(altitude, state)
 
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

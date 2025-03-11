@@ -57,3 +57,49 @@ def decode(data: int):
     return label_out, sdi, data_out, ssm
 
 
+def encode_001(altitude: int, state: int) -> (int, int):
+    if altitude is None:
+        return (1, state) if state == ON_GROUND else (0, 0)
+
+    sign = 1 if altitude < 0 else 0
+    altitude = abs(altitude)
+
+    out = sign << (SigBits + 1)
+    k = SigBits
+    while altitude > 1 and k >= 0:
+        step = ALTITUDE_MAX / (2 ** (SigBits - k))
+        if altitude >= step:
+            out |= 1 << k
+            altitude -= step
+        k -= 1
+
+    out <<= 2
+
+    if state in (ON_GROUND, ALTITUDE_CHANGE, CRUISE):
+        out |= state
+        return 3, out
+
+    return 0, out
+
+
+def decode_001(ssm: int, data: int) -> (int, int):
+    if ssm == 0:
+        return None, None
+    if ssm == 1:
+        return None, data  # data is only state in that case
+
+    state = data & 3
+    data >>= 2
+
+    altitude = 0
+    for k in range(SigBits + 1):
+        altitude += (data & 1) * (ALTITUDE_MAX / (2 ** (SigBits - k)))
+        data >>= 1
+
+    if data:
+        altitude = -altitude
+
+    return altitude, state
+
+
+
