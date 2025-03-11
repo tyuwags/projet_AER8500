@@ -102,4 +102,35 @@ def decode_001(ssm: int, data: int) -> (int, int):
     return altitude, state
 
 
+def encode_002(rise_rate: float) -> (int, int):
+    if rise_rate is None:
+        return 1, 0
+    ssm = 0
+    if rise_rate < 0:
+        ssm = 3
+    rise_rate = abs(rise_rate)
+    rise_rate_bits = (
+        (int(rise_rate // 100) << 12)
+        | ((int(rise_rate // 10) % 10) << 8)
+        | (int(rise_rate % 10) << 4)
+        | (int(rise_rate * 10) % 10)
+    )
+    return ssm, rise_rate_bits
+
+
+def decode_002(ssm: int, data: int) -> float:
+    if ssm == 1:
+        return 0.0
+
+    rise_rate = (
+        (data & 0x0F)
+        + ((data >> 4) & 0x0F) * 10
+        + ((data >> 8) & 0x0F) * 100
+        + ((data >> 12) & 0x0F) * 1000
+    ) / 10
+    if ssm == 3:
+        rise_rate = -rise_rate
+    return rise_rate
+
+
 

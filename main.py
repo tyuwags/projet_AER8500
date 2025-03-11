@@ -25,5 +25,11 @@ if __name__ == '__main__':
     altitude, state = arinc429.decode_001(ssm, data)
     print(altitude, state)
 
+    ssm, data = arinc429.encode_002(-391.2)
+    print(bin(ssm), bin(data))
+    rate = arinc429.decode_002(ssm, data)
+    print(rate)
+
+
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
