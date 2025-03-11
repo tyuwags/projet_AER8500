@@ -1,0 +1,59 @@
+ON_GROUND = 0
+ALTITUDE_CHANGE = 1
+CRUISE = 2
+ALTITUDE_MAX = 40000
+SigBits = 15
+
+
+def get_parity(x: int) -> int:
+    result = 0
+    while x:
+        result ^= x & 1
+        x >>= 1
+    return result ^ 1
+    # or return bin(x).count("1") % 2
+
+
+def check_parity(x: int) -> str:
+    return "Even" if get_parity(x) ^ 1 == 0 else "Odd"
+
+
+def is_valid(x: int) -> bool:
+    return get_parity(x >> 1) == x & 1
+
+
+def reverse_bits(x: int, num_bits: int) -> int:
+    return sum(((x >> i) & 1) << (num_bits - 1 - i) for i in range(num_bits))
+
+
+def encode(label: int, sdi: int, data: int, ssm: int) -> int:
+    label_bits = ((label // 100) << 6) | (((label // 10) % 10) << 3) | (label % 10)
+    label_reversed = reverse_bits(label_bits, 8)
+
+    result = label_reversed << 24
+    result |= reverse_bits(sdi, 2) << 22
+    result |= reverse_bits(data, 19) << 3
+    result |= reverse_bits(ssm, 2) << 1
+
+    result |= get_parity(result)
+
+    return result
+
+
+def decode(data: int):
+    if not is_valid(data):
+        return "Data is not valid"
+    ssm = data >> 1 & 0xF
+    data_out = data >> 3 & 0x7FFFF
+    sdi = data >> 22 & 0xF
+    label = data >> 24 & 0xFF
+    ssm = reverse_bits(ssm, 2)
+    data_out = reverse_bits(data_out, 19)
+    sdi = reverse_bits(sdi, 2)
+    label = reverse_bits(label, 8)
+    label_out = (
+        (label & 0x07) + ((label >> 3) & 0x07) * 10 + ((label >> 6) & 0x03) * 100
+    )
+    return label_out, sdi, data_out, ssm
+
+
