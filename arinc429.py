@@ -101,7 +101,7 @@ class ARINC429:
     @staticmethod
     def __decode_002(ssm: int, data: int) -> float:
         if ssm == 1:
-            return 0.0
+            return None
 
         rise_rate = (
                             (data & 0x0F)
@@ -130,7 +130,7 @@ class ARINC429:
     @staticmethod
     def __decode_003(ssm: int, data: int) -> float:
         if ssm == 1:
-            return 0.0
+            return None
         angle = ((data & 0x0F) + ((data >> 4) & 0x0F) * 10 + ((data >> 8) & 1) * 100) / 10
         if ssm == 3:
             angle = -angle
@@ -159,9 +159,9 @@ class ARINC429:
         return result
 
     @staticmethod
-    def decode(data: int):
+    def decode(data: int) -> list:
         if not ARINC429.is_valid(data):
-            return "Data is not valid"
+            return [None]
         ssm = data >> 1 & 0xF
         data_out = data >> 3 & 0x7FFFF
         sdi = data >> 22 & 0xF
@@ -174,8 +174,8 @@ class ARINC429:
                 (label & 0x07) + ((label >> 3) & 0x07) * 10 + ((label >> 6) & 0x03) * 100
         )
         if label_out - 1 not in range(len(ARINC429.__decodes)):
-            return "Data is not valid"
+            return [None]
 
         out = ARINC429.__decodes[label_out - 1](ssm, data_out)
 
-        return label_out, sdi, ssm, out
+        return [label_out, sdi, ssm, out]

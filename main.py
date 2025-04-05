@@ -19,7 +19,10 @@ if __name__ == '__main__':
     word = 0b01100000000000000000000000000110  # Example ARINC 429 word
     print(ARINC429.check_parity(word))
     print(ARINC429.is_valid(word))
-    print(ARINC429.decode(ARINC429.encode(1, 2, 300000, ARINC429.ON_GROUND)))
+    print(ARINC429.encode(1, 2, 300000, ARINC429.ON_GROUND))
+    print(ARINC429.is_valid(ARINC429.encode(1, 2, 300000, ARINC429.ON_GROUND)))
+    print(ARINC429.decode(int(ARINC429.encode(1, 2, 3000, ARINC429.CRUISE))))
+    print(ARINC429.decode(2147483648))
 
     # ssm, data = ARINC429.encode_001(-30000, ARINC429.CRUISE)
     # print(bin(ssm), bin(data))
