@@ -24,6 +24,10 @@ if __name__ == '__main__':
     print(ARINC429.decode(int(ARINC429.encode(1, 2, 3000, ARINC429.CRUISE))))
     print(ARINC429.decode(2151677953))
 
+
+    print(ARINC429.encode(4, 2, 100))
+    print(ARINC429.decode(ARINC429.encode(4, 2, -799.99)))
+
     # ssm, data = ARINC429.encode_001(-30000, ARINC429.CRUISE)
     # print(bin(ssm), bin(data))
     # altitude, state = ARINC429.decode_001(ssm, data)
