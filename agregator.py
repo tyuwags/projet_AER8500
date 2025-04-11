@@ -49,46 +49,68 @@ class ARINC429GUI(tk.Tk):
         self.connect_thread.start()
 
     def create_widgets(self):
-        frame = ttk.Frame(self)
-        frame.pack(padx=10, pady=10, fill="x")
+        # Configure the main window
+        self.geometry("800x400")  # Resize as needed
 
-        ttk.Label(frame, text="Altitude desired:").grid(row=0, column=0, sticky="w")
-        self.altitude_entry = ttk.Entry(frame)
-        self.altitude_entry.grid(row=0, column=1)
+        # Create main frame with two columns
+        main_frame = ttk.Frame(self)
+        main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Left side frame for entries and status
+        left_frame = ttk.Frame(main_frame)
+        left_frame.grid(row=0, column=0, sticky="nw", padx=10)
+
+        # Right side frame for the graph
+        right_frame = ttk.Frame(main_frame)
+        right_frame.grid(row=0, column=1, sticky="nsew", padx=10)
+        main_frame.columnconfigure(1, weight=1)  # Allow the graph to expand
+
+        # === LEFT SIDE CONTENT ===
+        ttk.Label(left_frame, text="Altitude desired:").grid(row=0, column=0, sticky="w")
+        self.altitude_entry = ttk.Entry(left_frame)
+        self.altitude_entry.grid(row=0, column=1, sticky="ew")
         self.altitude_entry.bind("<Return>", self.handle_altitude_input)
 
-        ttk.Label(frame, text="Power of motor:").grid(row=1, column=0, sticky="w")
-        self.power_entry = ttk.Entry(frame)
-        self.power_entry.grid(row=1, column=1)
+        ttk.Label(left_frame, text="Power of motor:").grid(row=1, column=0, sticky="w")
+        self.power_entry = ttk.Entry(left_frame)
+        self.power_entry.grid(row=1, column=1, sticky="ew")
         self.power_entry.bind("<Return>", self.handle_power_input)
 
-        self.status_label = ttk.Label(self, text="Connecting...", foreground="orange")
-        self.status_label.pack(pady=(5, 0))
+        self.status_label = ttk.Label(left_frame, text="Connecting...", foreground="orange")
+        self.status_label.grid(row=2, column=0, columnspan=2, sticky="w", pady=(5, 10))
 
-        tk.Label(self, text="Current Altitude:").pack(padx=10)
-        tk.Label(self, textvariable=self.altitude_var).pack(padx=10)
+        # Current state variables
+        ttk.Label(left_frame, text="Current Altitude:").grid(row=3, column=0, sticky="w")
+        ttk.Label(left_frame, textvariable=self.altitude_var).grid(row=3, column=1, sticky="w")
 
-        tk.Label(self, text="Current Power:").pack(padx=10)
-        tk.Label(self, textvariable=self.power_var).pack(padx=10)
+        ttk.Label(left_frame, text="Current Power:").grid(row=4, column=0, sticky="w")
+        ttk.Label(left_frame, textvariable=self.power_var).grid(row=4, column=1, sticky="w")
 
-        tk.Label(self, text="Current rise rate:").pack(padx=10)
-        tk.Label(self, textvariable=self.rise_var).pack(padx=10)
+        ttk.Label(left_frame, text="Current rise rate:").grid(row=5, column=0, sticky="w")
+        ttk.Label(left_frame, textvariable=self.rise_var).grid(row=5, column=1, sticky="w")
 
-        tk.Label(self, text="Current angle:").pack(padx=10)
-        tk.Label(self, textvariable=self.angle_var).pack(padx=10)
+        ttk.Label(left_frame, text="Current angle:").grid(row=6, column=0, sticky="w")
+        ttk.Label(left_frame, textvariable=self.angle_var).grid(row=6, column=1, sticky="w")
 
-        tk.Label(self, text="Current state:").pack(padx=10)
-        tk.Label(self, textvariable=self.status_var).pack(padx=10)
+        ttk.Label(left_frame, text="Current state:").grid(row=7, column=0, sticky="w")
+        ttk.Label(left_frame, textvariable=self.status_var).grid(row=7, column=1, sticky="w")
 
-        fig = Figure(figsize=(5, 2), dpi=100)
+        # Make entry columns stretch a little
+        left_frame.columnconfigure(1, weight=1)
+
+        # === RIGHT SIDE: Matplotlib plot ===
+        fig = Figure(figsize=(5, 3), dpi=100)
         self.ax = fig.add_subplot(111)
         self.altitude_line, = self.ax.plot([], [], label="Altitude (ft)")
-        self.ax.set_xlabel("Time (s)")
-        self.ax.set_ylabel("Altitude")
+        self.ax.set_xlabel("Time (min)")
+        self.ax.set_ylabel("Altitude (ft)")
         self.ax.set_title("Altitude vs Time")
+        self.ax.grid(True)
 
-        self.canvas = FigureCanvasTkAgg(fig, master=self)
-        self.canvas.get_tk_widget().pack()
+        fig.tight_layout()
+
+        self.canvas = FigureCanvasTkAgg(fig, master=right_frame)
+        self.canvas.get_tk_widget().pack(fill="both", expand=True)
         self.canvas.draw()
 
     def update_altitude_plot(self):
@@ -99,8 +121,8 @@ class ARINC429GUI(tk.Tk):
         self.altitude_history.append(float(self.altitude_var.get()))
 
         # Keep last 100 points for performance
-        self.time_history = self.time_history[-100:]
-        self.altitude_history = self.altitude_history[-100:]
+        self.time_history = self.time_history[-200:]
+        self.altitude_history = self.altitude_history[-200:]
 
         self.altitude_line.set_data(self.time_history, self.altitude_history)
         self.ax.relim()
@@ -141,7 +163,7 @@ class ARINC429GUI(tk.Tk):
 
     def handle_power_input(self, input):
         try:
-            power = int(self.power_entry.get())
+            power = float(self.power_entry.get())
 
             encoded_power = ARINC429.encode(4, 0, power)
             self.send_data(encoded_power)
@@ -159,7 +181,7 @@ class ARINC429GUI(tk.Tk):
     def listen_to_socket(self):
         try:
             while self.connected:
-                words = self.socket.recv(64).decode('utf-8').strip().split("\n")
+                words = self.socket.recv(128).decode('utf-8').strip().split("\n")
                 if not words:
                     break
                 for word in words:
@@ -169,6 +191,7 @@ class ARINC429GUI(tk.Tk):
                     decoded = ARINC429.decode(data)
                     if decoded == [None]:
                         print("No data")
+                        print(data)
                         continue
 
                     label, sdi, ssm, out = decoded

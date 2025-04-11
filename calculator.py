@@ -105,13 +105,12 @@ class CalculatorServer:
     def __init__(self, host="127.0.0.1", port=65432):
         self.host = host
         self.port = port
-        self.calculator = Calculator()
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)  # Allow up to 5 clients in queue
         print(f"Server started on {self.host}:{self.port}")
 
-    def handle_client(self, client_socket, address):
+    def handle_client(self, client_socket, address, calculator):
         """Handle a single client connection."""
         print(f"Client connected: {address}")
 
@@ -123,7 +122,7 @@ class CalculatorServer:
 
                 print(f"Received from {address}: {word}")
 
-                response = self.calculator.process_data(word)
+                response = calculator.process_data(word)
                 for res in response:
                     client_socket.sendall(str(res).encode()+"\n".encode())
 
@@ -139,7 +138,8 @@ class CalculatorServer:
         try:
             while True:
                 client_socket, address = self.server_socket.accept()
-                client_thread = threading.Thread(target=self.handle_client, args=(client_socket, address))
+                calculator = Calculator()
+                client_thread = threading.Thread(target=self.handle_client, args=(client_socket, address, calculator))
                 client_thread.start()
         except KeyboardInterrupt:
             print("Shutting down server...")
