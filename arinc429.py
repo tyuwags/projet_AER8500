@@ -143,13 +143,10 @@ class ARINC429:
         if pwr < 0:
             ssm = 3
         pwr = abs(pwr)
-        print(bin(int(pwr // 100) << 16))
-        print(bin(int(pwr // 10) % 10 << 12))
         pwr_bits = (
             (int(pwr // 100) << 16) | ((int(pwr // 10) % 10)<< 12) | (int(pwr % 10) << 8) | ((int(pwr * 10) % 10) << 4) |
                     (int(pwr * 100) % 10)
         )
-        print(bin(pwr_bits))
 
         return ssm, pwr_bits
 
@@ -157,7 +154,6 @@ class ARINC429:
     def __decode_004(ssm: int, data: int) -> float | None:
         if ssm == 1:
             return None
-        print((data >> 15) & 0x07)
         pwr = ((data & 0x0F) + ((data >> 4) & 0x0F) * 10 + ((data >> 8) & 0x0F) * 100 + ((data >> 12) & 0x0F) * 1000 + ((data >> 16) & 0x07) * 10000) / 100
         if ssm == 3:
             pwr = -pwr

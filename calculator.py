@@ -1,26 +1,65 @@
 import socket
 import threading
+
+import numpy as np
+
 from arinc429 import ARINC429
 
 
 class Calculator:
+
+    def __init__(self):
+        self.state = ARINC429.ON_GROUND
+        self.altitude = 0
+        self.power = 0
     """Simple calculator class that supports basic operations."""
 
     def process_label_001(self, label_out, sdi, ssm, out) -> list:
-        altitude, state = out
+        desired_altitude, state = out
         if state is None:
             return [ARINC429.encode(label_out, sdi, None, None)]
 
-        if altitude is None:
+        if desired_altitude is None:
             return [ARINC429.encode(label_out, sdi, None, state)]
 
-        # Calcul of the rate of climb and the rise angle
-        new_altitude = 0
-        new_state = 0
-        climb_rate = 0
-        rise_rate = 0
+        V = self.power * 10 /3.6*3.28084
 
-        return [ARINC429.encode(label_out, sdi, new_altitude, new_state), ARINC429.encode(2, sdi, climb_rate), ARINC429.encode(3, sdi, rise_rate)]
+        # Calcul of the rate of climb and the rise angle
+        if abs(desired_altitude - self.altitude) > 0.1:
+            diff = desired_altitude - self.altitude
+            if diff < 0:
+                angle = max(diff/10, -16)
+            else:
+                angle = min(diff/10, 16)
+            angle = np.deg2rad(angle)
+            climb_rate = V * np.sin(angle)
+
+            if climb_rate < 0:
+                climb_rate = max(climb_rate, -800*3.28084/60)
+            else:
+                climb_rate = min(climb_rate, 800*3.28084/60)
+
+            new_altitude = self.altitude + climb_rate
+            climb_rate *= 60
+            self.altitude = new_altitude
+            new_state = ARINC429.ALTITUDE_CHANGE
+            angle = np.rad2deg(angle)
+        else:
+            if abs(desired_altitude) < 1:
+                new_state = ARINC429.ON_GROUND
+                new_altitude = 0
+                self.altitude = 0
+            else:
+                new_state = ARINC429.CRUISE
+                new_altitude = desired_altitude
+                self.altitude = new_altitude
+
+            climb_rate = 0
+            angle = 0
+
+        self.state = new_state
+
+        return [ARINC429.encode(label_out, sdi, new_altitude, new_state), ARINC429.encode(2, sdi, climb_rate), ARINC429.encode(3, sdi, angle)]
 
 
     def process_label_002(self, label_out, sdi, ssm, out) -> list:
@@ -30,6 +69,10 @@ class Calculator:
     def process_label_003(self, label_out, sdi, ssm, out) -> list:
         # Shouldn't process this label in calculator class
         return [ARINC429.encode(label_out, sdi, None)]
+
+    def process_label_004(self, label_out, sdi, ssm, out) -> list:
+        self.power = out
+        return [ARINC429.encode(label_out, sdi, out)]
 
     def error(self) -> list:
         return [ARINC429.encode(0, 0, None)]
@@ -49,6 +92,8 @@ class Calculator:
                 return self.process_label_002(label_out, sdi, ssm, out)
             case 3:
                 return self.process_label_003(label_out, sdi, ssm, out)
+            case 4:
+                return self.process_label_004(label_out, sdi, ssm, out)
             case _:
                 return self.error()
 
@@ -72,7 +117,7 @@ class CalculatorServer:
 
         while True:
             try:
-                word = int(client_socket.recv(32).decode('utf-8').strip())
+                word = int(client_socket.recv(64).decode('utf-8').strip())
                 if not word:
                     break
 
