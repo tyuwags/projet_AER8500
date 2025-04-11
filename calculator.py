@@ -6,13 +6,13 @@ from arinc429 import ARINC429
 class Calculator:
     """Simple calculator class that supports basic operations."""
 
-    def process_label_001(self, data):
-        altitude, state = data
+    def process_label_001(self, label_out, sdi, ssm, out) -> list:
+        altitude, state = out
         if state is None:
-            return ARINC429.encode(1, 0, None, None)
+            return [ARINC429.encode(label_out, sdi, None, None)]
 
         if altitude is None:
-            return ARINC429.encode(1, 0, None, state)
+            return [ARINC429.encode(label_out, sdi, None, state)]
 
         # Calcul of the rate of climb and the rise angle
         new_altitude = 0
@@ -20,36 +20,35 @@ class Calculator:
         climb_rate = 0
         rise_rate = 0
 
-        return ARINC429.encode(1, 0, new_altitude, new_state), ARINC429.encode(2, 0, climb_rate), ARINC429.encode(3, 0, rise_rate)
+        return [ARINC429.encode(label_out, sdi, new_altitude, new_state), ARINC429.encode(2, sdi, climb_rate), ARINC429.encode(3, sdi, rise_rate)]
 
 
-
-    def process_label_002(self, data):
+    def process_label_002(self, label_out, sdi, ssm, out) -> list:
         # Shouldn't process this label in calculator class
-        return ARINC429.encode(2, 0, None)
+        return [ARINC429.encode(label_out, sdi, None)]
 
-    def process_label_003(self, data):
+    def process_label_003(self, label_out, sdi, ssm, out) -> list:
         # Shouldn't process this label in calculator class
-        return ARINC429.encode(3, 0, None)
+        return [ARINC429.encode(label_out, sdi, None)]
 
-    def error(self):
-        return ARINC429.encode(0, 0, None)
+    def error(self) -> list:
+        return [ARINC429.encode(0, 0, None)]
 
-    def process_data(self, data):
+    def process_data(self, data) -> list:
         """Process a request string and return the result."""
         result = ARINC429.decode(data)
-        if result is [None]:
+        if result == [None]:
             print("No data")
             return self.error()
         label_out, sdi, ssm, out = result
 
         match label_out:
             case 1:
-                return self.process_label_001(out)
+                return self.process_label_001(label_out, sdi, ssm, out)
             case 2:
-                return self.process_label_002(out)
+                return self.process_label_002(label_out, sdi, ssm, out)
             case 3:
-                return self.process_label_003(out)
+                return self.process_label_003(label_out, sdi, ssm, out)
             case _:
                 return self.error()
 
@@ -73,14 +72,15 @@ class CalculatorServer:
 
         while True:
             try:
-                data = int(client_socket.recv(32).decode('utf-8').strip())
-                if not data:
+                word = int(client_socket.recv(32).decode('utf-8').strip())
+                if not word:
                     break
 
-                print(f"Received from {address}: {data}")
+                print(f"Received from {address}: {word}")
 
-                response = self.calculator.process_data(data)
-                client_socket.sendall(str(response).encode())
+                response = self.calculator.process_data(word)
+                for res in response:
+                    client_socket.sendall(str(res).encode()+"\n".encode())
 
             except Exception as e:
                 print(f"Error with client {address}: {str(e)}")

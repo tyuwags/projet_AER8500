@@ -99,7 +99,7 @@ class ARINC429:
         return ssm, rise_rate_bits
 
     @staticmethod
-    def __decode_002(ssm: int, data: int) -> float:
+    def __decode_002(ssm: int, data: int) -> float | None:
         if ssm == 1:
             return None
 
@@ -128,7 +128,7 @@ class ARINC429:
         return ssm, angle_bits
 
     @staticmethod
-    def __decode_003(ssm: int, data: int) -> float:
+    def __decode_003(ssm: int, data: int) -> float | None:
         if ssm == 1:
             return None
         angle = ((data & 0x0F) + ((data >> 4) & 0x0F) * 10 + ((data >> 8) & 1) * 100) / 10
@@ -142,7 +142,7 @@ class ARINC429:
     @staticmethod
     def encode(label: int, sdi: int, *args) -> int:
         if label - 1 not in range(len(ARINC429.__encodes)):
-            return 0
+            return 1
 
         ssm, data = ARINC429.__encodes[label - 1](*args)
 
