@@ -22,22 +22,24 @@ class Calculator:
         if desired_altitude is None:
             return [ARINC429.encode(label_out, sdi, None, state)]
 
-        V = self.power * 10 /3.6*3.28084
+        V = self.power * 6 /3.6*3.28084
 
         # Calcul of the rate of climb and the rise angle
-        if abs(desired_altitude - self.altitude) > 0.1:
+        if abs(desired_altitude - self.altitude) > 1:
             diff = desired_altitude - self.altitude
             if diff < 0:
-                angle = max(diff/10, -16)
+                angle = max(diff/100, -16)
             else:
-                angle = min(diff/10, 16)
+                angle = min(diff/100, 16)
             angle = np.deg2rad(angle)
             climb_rate = V * np.sin(angle)
 
             if climb_rate < 0:
-                climb_rate = max(climb_rate, -800*3.28084/60)
+                climb_rate = max(climb_rate, -800/60)
             else:
-                climb_rate = min(climb_rate, 800*3.28084/60)
+                climb_rate = min(climb_rate, 800/60)
+
+            angle = np.arcsin(climb_rate/V)
 
             new_altitude = self.altitude + climb_rate
             climb_rate *= 60
@@ -45,7 +47,7 @@ class Calculator:
             new_state = ARINC429.ALTITUDE_CHANGE
             angle = np.rad2deg(angle)
         else:
-            if abs(desired_altitude) < 1:
+            if abs(self.altitude) < 1:
                 new_state = ARINC429.ON_GROUND
                 new_altitude = 0
                 self.altitude = 0
@@ -120,7 +122,7 @@ class CalculatorServer:
                 if not word:
                     break
 
-                print(f"Received from {address}: {word}")
+                # print(f"Received from {address}: {word}")
 
                 response = calculator.process_data(word)
                 for res in response:
