@@ -34,6 +34,7 @@ class ARINC429GUI(tk.Tk):
         self.status_var = tk.StringVar(value=handle_state(ARINC429.ON_GROUND))
         self.status = ARINC429.ON_GROUND
         self.altitude = 0
+        self.power = 0
 
         self.altitude_history = []
         self.time_history = []
@@ -121,8 +122,8 @@ class ARINC429GUI(tk.Tk):
         self.altitude_history.append(float(self.altitude_var.get()))
 
         # Keep last 100 points for performance
-        self.time_history = self.time_history[-200:]
-        self.altitude_history = self.altitude_history[-200:]
+        self.time_history = self.time_history[-400:]
+        self.altitude_history = self.altitude_history[-400:]
 
         self.altitude_line.set_data(self.time_history, self.altitude_history)
         self.ax.relim()
@@ -155,7 +156,7 @@ class ARINC429GUI(tk.Tk):
             self.altitude = int(self.altitude_entry.get())
             self.handle_altitude()
         except Exception as e:
-            messagebox.showerror("Send Error", str(e))
+            print("Send Error", str(e))
 
     def handle_altitude(self):
         encoded_altitude = ARINC429.encode(1, 0, self.altitude, self.status)
@@ -163,12 +164,12 @@ class ARINC429GUI(tk.Tk):
 
     def handle_power_input(self, input):
         try:
-            power = float(self.power_entry.get())
+            self.power = float(self.power_entry.get())
 
-            encoded_power = ARINC429.encode(4, 0, power)
+            encoded_power = ARINC429.encode(4, 0, self.power)
             self.send_data(encoded_power)
         except Exception as e:
-            messagebox.showerror("Send Error", str(e))
+            print("Send Error", str(e))
 
     def send_data(self, data):
         if not self.connected:
