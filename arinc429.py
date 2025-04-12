@@ -144,7 +144,7 @@ class ARINC429:
             ssm = 3
         pwr = abs(pwr)
         pwr_bits = (
-            (int(pwr // 100) << 16) | ((int(pwr // 10) % 10)<< 12) | (int(pwr % 10) << 8) | ((int(pwr * 10) % 10) << 4) |
+            ((int(pwr // 100) & 0x07)<< 16) | ((int(pwr // 10) % 10)<< 12) | (int(pwr % 10) << 8) | ((int(pwr * 10) % 10) << 4) |
                     (int(pwr * 100) % 10)
         )
 
