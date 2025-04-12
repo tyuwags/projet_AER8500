@@ -12,6 +12,7 @@ class Calculator:
         self.state = ARINC429.ON_GROUND
         self.altitude = 0
         self.power = 0
+        self.desired_power = 0
         self.climb = 0
     """Simple calculator class that supports basic operations."""
 
@@ -23,7 +24,14 @@ class Calculator:
         if desired_altitude is None:
             return [ARINC429.encode(label_out, sdi, None, state)]
 
-        V = self.power * 6 /3.6*3.28084
+        if self.power != self.desired_power:
+            diff = self.desired_power - self.power
+            if diff < 0:
+                self.power += max(diff/2, -5)
+            else:
+                self.power += min(diff/2, 5)
+
+        V = self.power * 0.6 /3.6*3.28084
 
         # Calcul of the rate of climb and the rise angle
         if abs(desired_altitude - self.altitude) > 1:
@@ -37,15 +45,15 @@ class Calculator:
 
             if climb_rate < 0:
                 climb_rate = max(climb_rate, -800/60)
-                climb_rate = max(climb_rate, self.climb - 0.5)
+                climb_rate = max(climb_rate, self.climb - 0.05)
             else:
                 climb_rate = min(climb_rate, 800/60)
-                climb_rate = min(climb_rate, self.climb + 0.5)
+                climb_rate = min(climb_rate, self.climb + 0.05)
 
-            print(climb_rate)
             self.climb = climb_rate
 
-            angle = np.arcsin(climb_rate/V)
+            if V != 0:
+                angle = np.arcsin(climb_rate/V)
 
             new_altitude = self.altitude + climb_rate
             climb_rate *= 60
@@ -67,7 +75,7 @@ class Calculator:
 
         self.state = new_state
 
-        return [ARINC429.encode(label_out, sdi, new_altitude, new_state), ARINC429.encode(2, sdi, climb_rate), ARINC429.encode(3, sdi, angle)]
+        return [ARINC429.encode(label_out, sdi, new_altitude, new_state), ARINC429.encode(2, sdi, climb_rate), ARINC429.encode(3, sdi, angle), ARINC429.encode(4, sdi, self.power)]
 
 
     def process_label_002(self, label_out, sdi, ssm, out) -> list:
@@ -79,8 +87,8 @@ class Calculator:
         return [ARINC429.encode(label_out, sdi, None)]
 
     def process_label_004(self, label_out, sdi, ssm, out) -> list:
-        self.power = out
-        return [ARINC429.encode(label_out, sdi, out)]
+        self.desired_power = out
+        return [ARINC429.encode(label_out, sdi, self.power)]
 
     def error(self) -> list:
         return [ARINC429.encode(0, 0, None)]
