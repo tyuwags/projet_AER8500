@@ -12,6 +12,7 @@ class Calculator:
         self.state = ARINC429.ON_GROUND
         self.altitude = 0
         self.power = 0
+        self.climb = 0
     """Simple calculator class that supports basic operations."""
 
     def process_label_001(self, label_out, sdi, ssm, out) -> list:
@@ -36,8 +37,13 @@ class Calculator:
 
             if climb_rate < 0:
                 climb_rate = max(climb_rate, -800/60)
+                climb_rate = max(climb_rate, self.climb - 0.5)
             else:
                 climb_rate = min(climb_rate, 800/60)
+                climb_rate = min(climb_rate, self.climb + 0.5)
+
+            print(climb_rate)
+            self.climb = climb_rate
 
             angle = np.arcsin(climb_rate/V)
 
