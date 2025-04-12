@@ -37,7 +37,7 @@ class ARINC429GUI(tk.Tk):
 
         self.altitude_history = []
         self.time_history = []
-        self.start_time = time.time()
+        self.time = 0
 
         self.host = host
         self.port = port
@@ -116,8 +116,8 @@ class ARINC429GUI(tk.Tk):
     def update_altitude_plot(self):
         if self.altitude_var.get() is None:
             return
-        current_time = time.time() - self.start_time
-        self.time_history.append(current_time)
+        self.time += 1
+        self.time_history.append(self.time/60)
         self.altitude_history.append(float(self.altitude_var.get()))
 
         # Keep last 100 points for performance
