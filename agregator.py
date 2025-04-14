@@ -35,6 +35,10 @@ class ARINC429GUI(tk.Tk):
         self.status = ARINC429.ON_GROUND
         self.altitude = 0
         self.power = 0
+        self.angle = 0
+        self.rise = 0
+
+        self.flag = False
 
         self.altitude_history = []
         self.time_history = []
@@ -77,24 +81,34 @@ class ARINC429GUI(tk.Tk):
         self.power_entry.grid(row=1, column=1, sticky="ew")
         self.power_entry.bind("<Return>", self.handle_power_input)
 
+        ttk.Label(left_frame, text="Angle:").grid(row=2, column=0, sticky="w")
+        self.angle_entry = ttk.Entry(left_frame)
+        self.angle_entry.grid(row=2, column=1, sticky="ew")
+        self.angle_entry.bind("<Return>", self.handle_angle_input)
+
+        ttk.Label(left_frame, text="Climb rate:").grid(row=3, column=0, sticky="w")
+        self.rise_entry = ttk.Entry(left_frame)
+        self.rise_entry.grid(row=3, column=1, sticky="ew")
+        self.rise_entry.bind("<Return>", self.handle_rise_input)
+
         self.status_label = ttk.Label(left_frame, text="Connecting...", foreground="orange")
-        self.status_label.grid(row=2, column=0, columnspan=2, sticky="w", pady=(5, 10))
+        self.status_label.grid(row=4, column=0, columnspan=2, sticky="w", pady=(5, 10))
 
         # Current state variables
-        ttk.Label(left_frame, text="Current Altitude:").grid(row=3, column=0, sticky="w")
-        ttk.Label(left_frame, textvariable=self.altitude_var).grid(row=3, column=1, sticky="w")
+        ttk.Label(left_frame, text="Current Altitude:").grid(row=5, column=0, sticky="w")
+        ttk.Label(left_frame, textvariable=self.altitude_var).grid(row=5, column=1, sticky="w")
 
-        ttk.Label(left_frame, text="Current Power:").grid(row=4, column=0, sticky="w")
-        ttk.Label(left_frame, textvariable=self.power_var).grid(row=4, column=1, sticky="w")
+        ttk.Label(left_frame, text="Current Power:").grid(row=6, column=0, sticky="w")
+        ttk.Label(left_frame, textvariable=self.power_var).grid(row=6, column=1, sticky="w")
 
-        ttk.Label(left_frame, text="Current rise rate:").grid(row=5, column=0, sticky="w")
-        ttk.Label(left_frame, textvariable=self.rise_var).grid(row=5, column=1, sticky="w")
+        ttk.Label(left_frame, text="Current rise rate:").grid(row=7, column=0, sticky="w")
+        ttk.Label(left_frame, textvariable=self.rise_var).grid(row=7, column=1, sticky="w")
 
-        ttk.Label(left_frame, text="Current angle:").grid(row=6, column=0, sticky="w")
-        ttk.Label(left_frame, textvariable=self.angle_var).grid(row=6, column=1, sticky="w")
+        ttk.Label(left_frame, text="Current angle:").grid(row=8, column=0, sticky="w")
+        ttk.Label(left_frame, textvariable=self.angle_var).grid(row=8, column=1, sticky="w")
 
-        ttk.Label(left_frame, text="Current state:").grid(row=7, column=0, sticky="w")
-        ttk.Label(left_frame, textvariable=self.status_var).grid(row=7, column=1, sticky="w")
+        ttk.Label(left_frame, text="Current state:").grid(row=9, column=0, sticky="w")
+        ttk.Label(left_frame, textvariable=self.status_var).grid(row=9, column=1, sticky="w")
 
         # Make entry columns stretch a little
         left_frame.columnconfigure(1, weight=1)
@@ -154,11 +168,14 @@ class ARINC429GUI(tk.Tk):
     def handle_altitude_input(self, input):
         try:
             self.altitude = int(self.altitude_entry.get())
+            self.flag = True
             self.handle_altitude()
         except Exception as e:
             print("Send Error", str(e))
 
     def handle_altitude(self):
+        encoded_flag = ARINC429.encode(5, 0, self.flag)
+        self.send_data(encoded_flag)
         encoded_altitude = ARINC429.encode(1, 0, self.altitude, self.status)
         self.send_data(encoded_altitude)
 
@@ -171,18 +188,44 @@ class ARINC429GUI(tk.Tk):
         except Exception as e:
             print("Send Error", str(e))
 
+    def handle_angle_input(self, input):
+        try:
+            self.angle = float(self.angle_entry.get())
+
+            encoded_angle = ARINC429.encode(3, 0, self.angle)
+            self.flag = False
+            encoded_flag = ARINC429.encode(5, 0, self.flag)
+            self.send_data(encoded_flag)
+            self.send_data(encoded_angle)
+        except Exception as e:
+            print("Send Error", str(e))
+
+    def handle_rise_input(self, input):
+        try:
+            self.rise = float(self.rise_entry.get())
+            self.flag = False
+            self.handle_rise()
+        except Exception as e:
+            print("Send Error", str(e))
+
+    def handle_rise(self):
+        encoded_flag = ARINC429.encode(5, 0, self.flag)
+        self.send_data(encoded_flag)
+        encoded_rise = ARINC429.encode(2, 0, self.rise)
+        self.send_data(encoded_rise)
+
     def send_data(self, data):
         if not self.connected:
             messagebox.showwarning("Not connected", "Currently not connected to the server.")
             return
 
-        self.socket.sendall(str(data).encode())
+        self.socket.sendall(str(data).encode()+"\n".encode())
 
 
     def listen_to_socket(self):
         try:
             while self.connected:
-                words = self.socket.recv(128).decode('utf-8').strip().split("\n")
+                words = self.socket.recv(256).decode('utf-8').strip().split("\n")
                 if not words:
                     break
                 for word in words:
@@ -201,7 +244,6 @@ class ARINC429GUI(tk.Tk):
                         self.altitude_var.set(altitude)
                         self.status = state
                         self.status_var.set(handle_state(state))
-
                     elif label == 2:
                         self.rise_var.set(out)
                     elif label == 3:
@@ -209,7 +251,10 @@ class ARINC429GUI(tk.Tk):
                     elif label == 4:
                         self.power_var.set(out)
 
-                self.handle_altitude()
+                if self.flag:
+                    self.handle_altitude()
+                else:
+                    self.handle_rise()
                 self.update_altitude_plot()
 
 

@@ -159,8 +159,26 @@ class ARINC429:
             pwr = -pwr
         return pwr
 
-    __encodes = [__encode_001, __encode_002, __encode_003, __encode_004]
-    __decodes = [__decode_001, __decode_002, __decode_003, __decode_004]
+    @staticmethod
+    def __encode_005(flag: bool) -> (int, int):
+        if flag is None:
+            return 1, 0
+        ssm = 0
+        flag_bits = flag & 1
+
+        return ssm, flag_bits
+
+    @staticmethod
+    def __decode_005(ssm: int, data: int) -> float | None:
+        if ssm == 1:
+            return None
+
+        flag = bool(data & 1)
+
+        return flag
+
+    __encodes = [__encode_001, __encode_002, __encode_003, __encode_004, __encode_005]
+    __decodes = [__decode_001, __decode_002, __decode_003, __decode_004, __decode_005]
 
     @staticmethod
     def encode(label: int, sdi: int, *args) -> int:
